@@ -1,0 +1,76 @@
+/*___________________________________________________________________
+  ¦ MACRO:       CONTENTS                                           ¦
+  ¦ JOB:         Data Quality                                       ¦
+  ¦ PROGRAMMER:  Mahmoud Azimaee                                    ¦
+  ¦ DATE:        April 2011                                         ¦
+  ¦ DESCRIPTION: This Macro runs PROC CONTENTS for a series of      ¦
+  ¦              tables within a specified Domain and Database and  ¦
+  ¦              generates Overview Table as described in Data      ¦
+  ¦              Quality Report.                                    ¦
+  ¦ PARAMETERS:  DOMAIN= Database domain on SPDS                    ¦	
+  ¦              DB= Database prefix                                ¦	
+  ¦ EXAMPLE:     %CONTENTS(HEALTH,BMD);                             ¦	
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*/
+
+
+**********************************************************************;
+
+
+%MACRO CONTENTS (DOMAIN,DB);
+
+%PUT ___________________________________________________________________;
+%PUT ¦ Manitoba Centre for Health policy (MCHP)                         ¦;
+%PUT ¦ MACRO:        CONTENTS                                           ¦;
+%PUT ¦ JOB:          Data Quality                                       ¦;
+%PUT ¦ PROGRAMMER:   Mahmoud Azimaee                                    ¦;
+%PUT ¦ DATE:         April 2011                                         ¦;
+%PUT ¦ Running for:  &DOMAIN..&DB ... ;
+%PUT ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯;
+
+	%LET DOMAIN=%UPCASE(&DOMAIN);
+	%LET DB=%UPCASE(&DB);
+	PROC SQL NOPRINT;
+		SELECT MEMNAME INTO :DS SEPARATED BY " "  
+		FROM DICTIONARY.members  
+		WHERE LIBNAME = "&DOMAIN" AND SUBSTR(MEMNAME,1,%SYSFUNC(LENGTH(&DB)))="&DB";  
+		quit;
+	%LET DSN=%EVAL(%SYSFUNC(COUNTC(&DS,' '))+1);
+	%DO I=1 %TO &DSN;
+		PROC CONTENTS DATA=&DOMAIN..%SCAN(&DS,&I," ") OUT=contents&I NOPRINT;
+		run;
+		data contents_&DB;
+			%IF &I=1 %THEN %DO;
+				set contents&I;
+			%END;
+			%ELSE %DO;
+				set contents_&DB contents&I;
+			%END;
+		run;
+	%END;
+	PROC DATASETS;
+		delete 	contents1-contents&I;
+		run;
+	PROC SORT DATA=contents_&DB;
+		by MEMNAME;
+		run;
+	Data overview_&DB;
+		set contents_&DB;
+		by MEMNAME;
+		if first.MEMNAME then nvar=0;;
+		nvar+1;
+		if last.MEMNAME;
+		keep LIBNAME MEMNAME MEMLABEL NOBS NVAR;
+		Label NVAR='# of Variables';
+		run;
+	PROC PRINT DATA=overview_&DB LABEL;
+		TITLE "Overview for &DOMAIN..&DB Database";
+		run;;
+	PROC EXPORT DATA= WORK.overview_&DB
+	            OUTFILE= "/dq/saswork/&spdsuser/&DOMAIN._&DB._OVERVIEW.xls"		/*where /dq/saswork/&spdsuser is the location to output overview table*/
+	            DBMS=XLS REPLACE;
+	RUN;
+%MEND CONTENTS;
+
+
+
+

@@ -1,0 +1,642 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!-- saved from url=(0077)http://mchp-appserv.cpe.umanitoba.ca/viewConcept.php?printer=Y&conceptID=1397 -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<title>
+Concept: MCHP Data Quality SAS® Macros
+</title>
+	</head>
+	<body>
+		<h1><p>
+Concept: MCHP Data Quality SAS® Macros
+</p></h1>
+				<h2>Concept Description</h2>
+	<p>
+		<b>Last Updated</b>:&nbsp;2013-11-15<br>
+<!--		<b>Last Reviewed</b>:&nbsp;2012-11-27<br />-->
+	</p>
+
+	Introduction		<ul>
+Data Quality, encompassing the completeness and accuracy of the data, is an important aspect for program management as well as for research purposes. This concept briefly describes the MCHP Data Quality Framework that is applied to data sets acquired for the MCHP Data Repository and provides details on the tools that assist during this phase of the Data Management process. These tools include a set of SAS® Macros that are used to assess the quality of data of every data set in the MCHP Data Repository. This concept also describes the logical step-by-step process that applies these macros during a typical data quality assessment of a new data set.<br>
+<br>
+<span style="font-size: 1.5;">
+<b>
+IMPORTANT NOTES:</b>
+</span>
+<br>
+<br>
+<ul>
+<li>
+The information contained in this concept comes from MCHP's original internal Data Quality Framework document (2012) and is based on information that was developed during the project that produced the deliverable <a href="http://mchp-appserv.cpe.umanitoba.ca/viewConcept.php?printer=Y&amp;conceptID=1397#a_references">
+A Systematic Investigation of Manitoba's Provincial Laboratory Data</a>
+ (2012).<br>
+<br>
+</li>
+<li>
+The MCHP Data Quality Process is constantly evolving. On November 15, 2013, the <a href="http://umanitoba.ca/faculties/health_sciences/medicine/units/chs/departmental_units/mchp/resources/repository/dataquality.html">
+MCHP Data Quality Web Site</a>
+ was made available on our external web site. Please visit for more up-to-date information on the current data quality process, including the SAS macros available for download and the current documentation related to the Data Quality Process at MCHP.</li>
+</ul>
+
+</ul>
+	
+	<blockquote>
+	
+	</blockquote>
+MCHP Data Quality Framework		<ul>
+At MCHP, a six-step Data Management process was created with input from a variety of individuals, including MCHP researchers and data analysts, representatives from Manitoba Health and the province's Regional Health Authorities. For more information, please read <a href="http://mchp-appserv.cpe.umanitoba.ca/reference/cadham_report_WEB.pdf#Page=19&amp;View=Fit">
+Chapter 2: The Data Management Process at MCHP</a>
+ in the deliverable. As part of the Data Management process, a formal MCHP Data Quality Framework was developed, following a review of provincial, national, and international quality evaluation frameworks for secondary data sources and with consideration for data privacy legislation in Manitoba.<br>
+<br>
+The MCHP Data Quality Framework allows MCHP to evaluate the quality of data it receives and assists with data quality evaluations during the research process. Within the Framework, "we identify dimensions of quality that are important for administrative data, measures of quality encompassed by the Framework, and tools (i.e.: SAS® macros) that have been developed to operationalize key components of the Framework". For more information, please read <a href="http://mchp-appserv.cpe.umanitoba.ca/reference/cadham_report_WEB.pdf#Page=25&amp;View=Fit">
+Chapter 3: A Framework for Data Quality Evaluation at MCHP</a>
+ in the deliverable.<br>
+<br>
+The MCHP Data Quality Framework is illustrated in <a href="http://mchp-appserv.cpe.umanitoba.ca/reference/cadham_report_WEB.pdf#Page=27&amp;Zoom=125">
+Figure 3.1: MCHP Data Quality Framework.</a>
+ This figure illustrates two different perspectives on data quality: 1) database-specific, and 2) project-specific.
+</ul>
+	
+	<blockquote>
+	1. Database-Specific Quality		<ul>
+"Database-specific quality encompasses concepts of accuracy, internal and external validity, timeliness, and interpretability. Each of these quality concepts is useful for assessing the usability of a database in a different way and is measured by one or more indicators using quantitative or qualitative methods. Some of the quality indicators are linked to macros, written in SAS and developed as part of this study. These macros can be used to generate summary data for a Data Quality Report."<br>
+<br>
+The data quality SAS® macros developed by MCHP are described in the next section of this concept.
+</ul>
+	
+	<blockquote>
+	
+	</blockquote>
+2. Project-Specific Quality		<ul>
+"Project-specific quality focuses on concepts of accuracy and validity. These concepts have the same meaning as the corresponding database-specific quality concepts, but indicators of these concepts are applied to a specific cohort, region, or time period that is the focus of the project. Accordingly, data quality evaluation results may vary for database-specific and project-specific analyses. For example, completeness of a field may be very high for the entire population, but if analysis is limited to a specific segment of the population (e.g., to study participants of a program), completeness may be much lower because of the characteristics of the program administration or population participation in the program."
+</ul>
+	
+	<blockquote>
+	
+	</blockquote>
+
+
+	</blockquote>
+MCHP Data Quality SAS® Macros		<ul>
+<b>
+NOTE:</b>
+ The information in this section relates to the original macros developed for the 2012 deliverable. Please see the <a href="http://umanitoba.ca/faculties/health_sciences/medicine/units/chs/departmental_units/mchp/resources/repository/dataquality.html">
+MCHP Data Quality Web site</a>
+ for more up-to-date information.<br>
+<br>
+This section identifies and describes the five main SAS macros that are used to investigate the database-specific quality of data sets at MCHP. This includes a description of what each macro does, the syntax for the macro call, the parameters that are available for the macro and examples of the macro call. The majority of this information comes from <a href="http://mchp-appserv.cpe.umanitoba.ca/reference/cadham_report_WEB.pdf#Page=101&amp;View=Fit">
+Appendix C: Description of Macros for Data Quality Evaluation</a>
+ in the deliverable. For each macro, a link to the actual MCHP SAS macro code is provided. The SAS macro code is formatted in a text file, but contains valid SAS code. <br>
+<br>
+<b>
+NOTE:</b>
+ The main macros involve calls to other SAS macros that are nested within the main macros. These "intermediate" macros are listed and described in the <a href="http://mchp-appserv.cpe.umanitoba.ca/viewConcept.php?printer=Y&amp;conceptID=1397#INTERMEDIATEMACROS">
+Intermediate Macros</a>
+ section of this concept.<br>
+<br>
+The five main data quality SAS macros are:<br>
+<br>
+<ol>
+<li>
+CONTENTS macro<br>
+</li>
+<li>
+VIMO macro;<br>
+</li>
+<li>
+TREND macro; <br>
+</li>
+<li>
+LINK macro; and<br>
+</li>
+<li>
+AGREEMENT macro;</li>
+</ol>
+
+</ul>
+
+<a name="CONTENTSMACRO">
+</a>
+
+	
+	<blockquote>
+	1. CONTENTS Macro		<ul>
+<b>
+Description:</b>
+ This macro runs PROC CONTENTS for a series of tables within a specified Domain and Database and generates a single overview table. <br>
+<br>
+<b>
+Syntax:</b>
+%CONTENTS (DOMAIN=, DB);<br>
+<br>
+<b>
+Parameters:</b>
+
+<blockquote>
+DOMAIN= Database domain on SPDS<br>
+DB= Database prefix</blockquote>
+<p>
+ <b>
+Examples:</b>
+<br>
+<br>
+</p><ul>
+<li>
+%CONTENTS (HEALTH,BMD);</li>
+</ul>
+<br>
+<b>
+CONTENTS Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/CONTENTS.sas.txt">
+CONTENTS.sas.txt</a>
+
+</ul>
+
+<a name="VIMOMACRO">
+</a>
+
+	
+	<blockquote>
+	
+	</blockquote>
+2. VIMO Macro		<ul>
+<b>
+Description:</b>
+ For a specified data file, this macro generates a table of valid, invalid, missing, and outlier (VIMO) observations. The table is in Excel format.<br>
+<br>
+<b>
+Syntax:</b>
+ %VIMO (DS= );<br>
+<br>
+<b>
+Parameters:</b>
+ 
+<blockquote>
+DS= Name of data file, which is in SAS format. This could be a temporary or permanent SAS dataset<br>
+INVALID= Option to turn invalid checks on or off (Default value=ON)<br>
+MEMNUM= List number of cluster members to include in the VIMO table. This parameter is not specified if there are no clusters.<br>
+MUNCODES= List of variables containing municipal codes, separated by blanks.<br>
+POSTALS= List of variables containing postal codes, separated by blanks.</blockquote>
+<p>
+ <b>
+Examples:</b>
+<br>
+<br>
+</p><ul>
+<li>
+%VIMO (health.MHCPL_virustests_19922010);<br>
+</li>
+<li>
+%VIMO (DS = health.MHCPL_virustests_19922010, INVALIDS = OFF);<br>
+</li>
+<li>
+%VIMO (DS = HEALTH.mhmed_1997apr, MEMNUM = 23 24 25);<br>
+</li>
+<li>
+%VIMO (DS = social.hcm_edi_2006jan, MEMNUM = 3, POSTALS = POSTAL p_code_original CL_POSTAL P_CODE P_CODE_E POSTAL_CODE POSTAL_CODE_HCM );</li>
+</ul>
+<br>
+<b>
+VIMO Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/VIMO.sas.txt">
+VIMO.sas.txt</a>
+
+</ul>
+
+<a name="TRENDMACRO">
+</a>
+
+	
+	<blockquote>
+	
+	</blockquote>
+3. TREND Macro		<ul>
+<b>
+Description:</b>
+ This macro conducts a trend analysis for a specified period of time. The results are summarized in a graphical format. The graph(s) are shown on screen and also saved in a PNG file.<br>
+<br>
+<b>
+Syntax:</b>
+ %TREND (DS=, STARTYR=, ENDYR=, BYDATE=, BYVAR=, BYFMT=, BYMONTH=);<br>
+<br>
+<b>
+Parameters:</b>
+
+<blockquote>
+DS= Name of dataset<br>
+STARTYR= Beginning fiscal year (1st part, 4-digit)<br>
+ENDYR= Ending fiscal year (1st part, 4-digit)<br>
+BYDATE= Desired date variable (Must be a SAS date)<br>
+BYVAR= An optional categorical variable to conduct stratified analyses. If omitted only one analysis is conducted for all records in the dataset.<br>
+BYFMT= An optional format for BYVAR.<br>
+BYMONTH= An optional parameter that will produce the analyses by month, instead of year, if assigned a value of YES (default value = NO).</blockquote>
+<p>
+ <b>
+Examples:</b>
+<br>
+ <br>
+</p><ul>
+<li>
+%TREND (DS=health.wrha_ccic_med_2003mar, STARTYR=2003, ENDYR=2010, BYDATE=admit_dt, BYVAR=HOSP);<br>
+</li>
+<li>
+%TREND (DS=health.MHCPL_virustests_19922010, STARTYR=1992, ENDYR=2009, BYDATE=RECEIVEDDT); <br>
+</li>
+<li>
+%TREND (DS=health.MHCPL_virustests_19922010, STARTYR=1992, ENDYR=2009, BYDATE=RECEIVEDDT, BYFMT=$HOSPFMTL.);<br>
+</li>
+<li>
+%TREND (DS=health.MHCPL_virustests_19922010, STARTYR=1992, ENDYR=2009, BYDATE=RECEIVEDDT, BYMONTH=YES);</li>
+</ul>
+<br>
+<b>
+TREND Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/TREND.sas.txt">
+TREND.sas.txt</a>
+
+</ul>
+
+<a name="LINKMACRO">
+</a>
+
+	
+	<blockquote>
+	
+	</blockquote>
+4. LINK Macro		<ul>
+<b>
+Description:</b>
+ For a series of data files, this macro creates a table (or members of a cluster) that calculates the linkability of individual data files based on the personal health information number (PHIN) in the Manitoba Health Insurance Registry. The output is shown on screen and also saved in an Excel file. The macro will also generate a frequency table for PHIN types.<br>
+<br>
+<b>
+Syntax:</b>
+ %LINK (DOMAIN=, DB=, PHIN=);<br>
+<br>
+<b>
+Parameters:</b>
+
+<blockquote>
+DOMAIN= Database domain<br>
+DB= Database prefix (or full name of cluster)<br>
+PHIN= Name of PHIN variable (Default=SCRPHIN)<br>
+TYPE= Name of PHINTYPE variable (Default=SCRPHINTYPE)</blockquote>
+<p>
+ <b>
+Examples:</b>
+<br>
+<br>
+</p><ul>
+<li>
+%LINK (health,MHCPL);<br>
+</li>
+<li>
+%LINK (health,MHCPL, PHIN=filephin);</li>
+<li>
+%LINK (DOMAIN=social, DB=hcm_edi_2006jan, PHIN=FILEPHIN, TYPE=FILEPHINTYPE);</li>
+</ul>
+<br>
+<b>
+LINK Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/LINK.sas.txt">
+LINK.sas.txt</a>
+
+</ul>
+
+<a name="AGREEMENTMACRO">
+</a>
+
+	
+	<blockquote>
+	
+	</blockquote>
+5. AGREEMENT Macro		<ul>
+<b>
+Description:</b>
+ This macro measures the agreement between a dataset and the Manitoba Health Insurance Registry and produces kappa statistics for sex and date of birth.<br>
+<br>
+<b>
+Syntax:</b>
+ %AGREEMENT (DS=, REGYR=, SEX=, M=, F=, BIRTHDT=);<br>
+<br>
+<b>
+Parameters:</b>
+
+<blockquote>
+DS= Name of dataset<br>
+REGYR= Latest available registry file (Default=2010)<br>
+PHIN= Variable containing PHIN (Default=SCRPHIN)<br>
+SEX= Variable containing sex (Default=SEX)<br>
+M= Numeric value assigned to males (Default=1)<br>
+F= Numeric value assigned to females (Default=2)<br>
+BIRTHDT= Variable containing date of birth (Default=BIRTHDT)</blockquote>
+<p>
+ <b>
+Examples:</b>
+ <br>
+<br>
+</p><ul>
+<li>
+%AGREEMENT (DS=health.MHCPL_SPSECTION_19922010);<br>
+</li>
+<li>
+%AGREEMENT (DS=health.MHCPL_SPSECTION_19922010, REGYR=2009);</li>
+</ul>
+<br>
+<b>
+AGREEMENT Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/AGREEMENT.sas.txt">
+AGREEMENT.sas.txt</a>
+
+</ul>
+
+<a name="INTERMEDIATEMACROS">
+</a>
+
+	
+	<blockquote>
+	
+	</blockquote>
+
+
+	</blockquote>
+Intermediate Macros		<ul>
+Several of the main data quality macros call intermediate macros that assist in the processing of the main macro. These intermediate macros are listed alphabetically and include a description and a link to the macro SAS code:<br>
+<br>
+<ol>
+<li>
+<b>
+AUTOLEVEL Macro:</b>
+ - this macro gets the levels of character variables in a dataset and lists them. If there are too many then only first and last level will be shown. This is called by the VIMO macro.
+<blockquote>
+<b>
+AUTOLEVEL Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/AUTOLEVEL.sas.txt">
+AUTOLEVEL.sas.txt</a>
+</blockquote>
+<p>
+ </p></li>
+<li>
+<b>
+FISCALYR Macro:</b>
+ - this macro creates a fiscal year format to be used on a SAS Date variable. The format will be saved as a SAS file in /dq/saswork/[USERNAME]/ under the name 'temp_fy.sas'. Use %include 'temp_fy.sas' in your programs to call it. The format name is 'fy.' 
+<blockquote>
+<b>
+FISCALYR Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/FISCALYR.sas.txt">
+FISCALYR.sas.txt</a>
+</blockquote>
+<p>
+ </p></li>
+<li>
+<b>
+GETFORMAT Macro:</b>
+ - for a given dataset this macro creates a temporary SAS dataset called contents (which is basically output of PROC CONTENTS). Also two macro variables NVFMT &amp; CVFMT containing numeric and character variables with their formats separated by a blank will be created.
+<blockquote>
+<b>
+GETFORMAT Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/GETFORMAT.sas.txt">
+GETFORMAT.sas.txt</a>
+</blockquote>
+<p>
+ </p></li>
+<li>
+<b>
+GETNOBS Macro:</b>
+ - this macro returns the Number of Observations in the given dataset through the macro variable NO. It is used in several of the main Data Quality macros.
+<blockquote>
+<b>
+GETNOBS Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/GETNOBS.sas.txt">
+GETNOBS.sas.txt</a>
+</blockquote>
+<p>
+ </p></li>
+<li>
+<b>
+GETVARLIST Macro:</b>
+ - for a given dataset this macro creates two macro variables containing a list of all character and numeric variables separated by a blank: NVARLIST &amp; CVARLIST. It is used in several of the main Data Quality macros.
+<blockquote>
+<b>
+GETVARLIST Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/GETVARLIST.sas.txt">
+GETVARLIST.sas.txt</a>
+</blockquote>
+<p>
+ </p></li>
+<li>
+<b>
+INVALID Macro:</b>
+ - this macro is called from the VIMO macro. It compares values of character variables with the values in their associated formats and provides percentages and list of mismatching values. The VIMO macro captures and adds this information into VIMO tables. This macro also can be called directly (results can be found in Work Directory in a SAS dataset called Invalid). 
+<blockquote>
+<b>
+INVALID Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/INVALID.sas.txt">
+INVALID.sas.txt</a>
+</blockquote>
+<p>
+ </p></li>
+<li>
+<b>
+LINKYR Macro:</b>
+ - this macro creates a table for Percentage of linkable records for a single table (or a whole cluster) . The table will be shown on screen and also will be saved in Excel format in /dq/saswork/[USERNAME]/ under name of [LIBNAME]_[DSNAME]_linkability_over_years.xls 
+<blockquote>
+<b>
+LINKYR Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/LINKYR.sas.txt">
+LINKYR.sas.txt</a>
+</blockquote>
+<p>
+ </p></li>
+<li>
+<b>
+MONTHLY Macro:</b>
+ - this macro creates a monthly-based format to be used on a SAS Date variable. The format will be saved as a SAS file in /dq/saswork/[USERNAME]/ under the name 'temp_monthly.sas'. Use % include 'temp_monthly.sas' in your programs to call it. The format name is 'monthly.' 
+<blockquote>
+<b>
+MONTHLY Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/MONTHLY.sas.txt">
+MONTHLY.sas.txt</a>
+</blockquote>
+<p>
+ </p></li>
+<li>
+<b>
+OUTLIER Macro:</b>
+ - this macro is called from a number of main macros for all numeric variables and adds it to VIMO's output. 
+<blockquote>
+<b>
+OUTLIER Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/OUTLIER.sas.txt">
+OUTLIER.sas.txt</a>
+</blockquote>
+<p>
+ </p></li>
+<li>
+<b>
+POSTMUN Macro:</b>
+ - this macro is called from the VIMO MACRO if Postal and Municipal code validation is requested. Percentage of postal and municipal codes which don't match with the Canadian patterns for these codes will be reported in Invalid code column and the actual invalid codes will be added to the Comment column of VIMO Table.
+<blockquote>
+<b>
+POSTMUN Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/POSTMUN.sas.txt">
+POSTMUN.sas.txt</a>
+</blockquote>
+
+</li>
+</ol>
+
+</ul>
+	
+	<blockquote>
+	
+	</blockquote>
+Application of the Data Quality SAS Macros		<ul>
+The following section provides a logical, step-by-step application of the Data Quality SAS macros, and also introduces two additional SAS macros relevant to the Data Acquisition/Data Quality process at MCHP. These macros are described below, along with a link to the specific SAS macro code.<br>
+<br>
+<ol>
+<li>
+Run the <b>
+META Macro</b>
+ - this MCHP specific macro generates a Metadata dataset using PROC CONTENTS with OUT option for a series of tables within a specified Domain and Database that is used in the Data Quality and Documentation processes. The output data will be generated in a WORK directory and the user will save it later in its' proper location. The output dataset is named Meta_[DB]. Note that all the SAS formats must be available to produce additional descriptive output. 
+<blockquote>
+<b>
+META Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/META.sas.txt">
+META.sas.txt</a>
+</blockquote>
+<p>
+ </p></li>
+<li>
+Run the <a href="http://mchp-appserv.cpe.umanitoba.ca/viewConcept.php?printer=Y&amp;conceptID=1397#CONTENTSMACRO">
+CONTENTS Macro</a>
+ to generate a list of database contents.<br>
+</li>
+<li>
+Run the <a href="http://mchp-appserv.cpe.umanitoba.ca/viewConcept.php?printer=Y&amp;conceptID=1397#VIMOMACRO">
+VIMO Macro</a>
+ to generate the VIMO table for the Data Quality report.<br>
+</li>
+<li>
+Run the <a href="http://mchp-appserv.cpe.umanitoba.ca/viewConcept.php?printer=Y&amp;conceptID=1397#TRENDMACRO">
+TREND Macro</a>
+ to generate the graphs for the Data Quality report.<br>
+</li>
+<li>
+Run the <b>
+PHINCHECK Macro</b>
+ - this Macro performs a few checks on the validity of PHIN particularly on SCRPHIN variable. For all individual specific PHINs, the PHINCHEK macro checks the position of numeric values within the PHIN and validates them. It also checks the distribution of the first position and compares it with the corresponding PHINs from registry files and if there is a significant difference it will be flagged on the results. 
+<blockquote>
+<b>
+PHINCHECK Macro SAS Code:</b>
+ <a href="http://mchp-appserv.cpe.umanitoba.ca/concept/PHINCHECK.sas.txt">
+PHINCHECK.sas.txt</a>
+</blockquote>
+
+ </li>
+<li>
+Run the <a href="http://mchp-appserv.cpe.umanitoba.ca/viewConcept.php?printer=Y&amp;conceptID=1397#LINKMACRO">
+LINK Macro</a>
+ to calculate the linkability of individual data files for the Data Quality report.<br>
+</li>
+<li>
+Run the <a href="http://mchp-appserv.cpe.umanitoba.ca/viewConcept.php?printer=Y&amp;conceptID=1397#AGREEMENTMACRO">
+AGREEMENT Macro</a>
+ to calculate the level of agreement between the data set and the registry file for the Data Quality report.<br>
+<br>
+<b>
+NOTE:</b>
+ The last three steps (macros) are "registry-based" and require access to the Manitoba Health Insurance Registry data.</li>
+</ol>
+<br>
+<b>
+Data Quality Report</b>
+<br>
+<br>
+Information generated from the Data Quality macros can be used to develop a Data Quality report for a specific data set. For an example Data Quality report, please see <a href="http://mchp-appserv.cpe.umanitoba.ca/reference/cadham_report_WEB.pdf#Page=31&amp;View=Fit">
+Chapter 4: Data Quality Report for the Cadham Provincial Laboratory Data</a>
+ in the deliverable.
+</ul>
+	
+	<blockquote>
+	
+	</blockquote>
+Cautions / Limitations		<ul>
+The following cautions / limitations are provided:<br>
+<br>
+<ul>
+<li>
+these macros were developed to work specifically within the MCHP computing environment with specific data sets, file structures, directory settings and formats related directly to the MCHP data. If you choose to work with these macros, they will need to be adapted to your organization's data management practices.<br>
+<br>
+</li>
+<li>
+The MCHP Data Quality SAS macros were developed using SAS® version 9.2 running on a Solaris (Unix) operating system. Therefore, some of the macro code is specific to these programming and operating system environments.<br>
+<br>
+</li>
+<li>
+MCHP <b>
+does not</b>
+ provide support for the original macros at other sites. Please use them at your own discretion.<br>
+<br>
+</li>
+<li>
+The information in this concept is based on the deliverable titled <a href="http://mchp-appserv.cpe.umanitoba.ca/viewConcept.php?printer=Y&amp;conceptID=1397#a_references">
+A Systematic Investigation of Manitoba's Provincial Laboratory Data</a>
+ (2012). For more current information related to data quality activities at MCHP, please visit the MCHP <a href="http://umanitoba.ca/faculties/health_sciences/medicine/units/chs/departmental_units/mchp/resources/repository/dataquality.html">
+Data Quality</a>
+ web site.</li>
+</ul>
+
+</ul>
+	
+	<blockquote>
+	
+	</blockquote>
+
+
+
+	
+
+	
+
+	
+	<h2>Related terms<a name="a_terms">&nbsp;</a></h2>
+	<ul>
+				<li><a href="http://mchp-appserv.cpe.umanitoba.ca/viewDefinition.php?definitionID=104270">Accuracy</a></li>
+				<li><a href="http://mchp-appserv.cpe.umanitoba.ca/viewDefinition.php?definitionID=104514">Data Management Process</a></li>
+				<li><a href="http://mchp-appserv.cpe.umanitoba.ca/viewDefinition.php?definitionID=104515">Data Quality Framework</a></li>
+				<li><a href="http://mchp-appserv.cpe.umanitoba.ca/viewDefinition.php?definitionID=104516">Database-Specific Quality</a></li>
+				<li><a href="http://mchp-appserv.cpe.umanitoba.ca/viewDefinition.php?definitionID=104523">Macro</a></li>
+				<li><a href="http://mchp-appserv.cpe.umanitoba.ca/viewDefinition.php?definitionID=104529">Project-Specific Quality</a></li>
+				<li><a href="http://mchp-appserv.cpe.umanitoba.ca/viewDefinition.php?definitionID=103615">Statistical Analysis System / Statistical Analysis Software (SAS®)</a></li>
+				<li><a href="http://mchp-appserv.cpe.umanitoba.ca/viewDefinition.php?definitionID=104536">Timeliness</a></li>
+				<li><a href="http://mchp-appserv.cpe.umanitoba.ca/viewDefinition.php?definitionID=104539">Validity - Data Quality</a></li>
+		
+	</ul>
+	
+
+	
+
+	
+	<h2>References<a name="a_references">&nbsp;</a></h2>
+	<ul>
+				<li>Lix L, Smith M, Azimaee M, Dahl M, Nicol P, Burchill C, Burland E, Goh C, Schultz J, Bailly A.
+<i>A Systematic Investigation of Manitoba's Provincial Laboratory Data</i>.
+Winnipeg, MB:
+Manitoba Centre for Health Policy,
+2012. [<a href="http://mchp-appserv.cpe.umanitoba.ca/reference/cadham_lab_summary_WEB.pdf">Summary</a>]  [<a href="http://mchp-appserv.cpe.umanitoba.ca/reference/cadham_report_WEB.pdf">Full Report</a>] (<a href="http://mchp-appserv.cpe.umanitoba.ca/viewReference.php?referencePaperID=76804">View</a>)</li>
+		
+	</ul>
+	
+
+	
+
+	
+	<h2>Keywords<a name="a_keywords">&nbsp;</a></h2>
+	<ul>
+		
+		<li>SAS</li>
+		
+	</ul>
+	
+
+	
+</body></html>

@@ -1,0 +1,88 @@
+/*___________________________________________________________________
+  ¦ MACRO:       META                                               ¦
+  ¦ JOB:         Data Quality                                       ¦
+  ¦ PROGRAMMER:  Mahmoud Azimaee                                    ¦
+  ¦ DATE:        June 2011                                          ¦
+  ¦ DESCRIPTION: This Macro generates a Metadata dataset using      ¦
+  ¦              PROC CONTENTS with OUT option for a series of      ¦
+  ¦              tables within a specified Domain and Database to be¦
+  ¦              used in Data Quality and Documentation Processes.  ¦
+  ¦              The output data will be in WORK directory and user ¦
+  ¦              would need to save it later in a proper location.  ¦
+  ¦              The output dataset will be named as Meta_[DB]      ¦
+  ¦              Note that all the formats must be available        ¦
+  ¦ PARAMETERS:  DOMAIN= Database domain on SPDS                    ¦	
+  ¦              DB= Database prefix                                ¦	
+  ¦              FMT= Location for a text file containing variables ¦
+  ¦              along with their associated formats                ¦
+  ¦ EXAMPLE:     %META(HEALTH,MHCPL,                                ¦	
+  ¦              '/phrdr/mahmoud/CADHAM/prog/mhcpl_varformat.txt'); ¦
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*/
+
+
+**********************************************************************;
+
+
+%MACRO META (DOMAIN,DB,FMT);
+
+%PUT ___________________________________________________________________;
+%PUT ¦ Manitoba Centre for Health policy (MCHP)                         ¦;
+%PUT ¦ MACRO:        META                                               ¦;
+%PUT ¦ JOB:          Data Quality                                       ¦;
+%PUT ¦ PROGRAMMER:   Mahmoud Azimaee                                    ¦;
+%PUT ¦ DATE:         June 2011                                          ¦;
+%PUT ¦ Running for:  &DOMAIN..&DB ... ;
+%PUT ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯;
+
+      %LET DB = %UPCASE(&DB);
+      %LET DOMAIN = %UPCASE(&DOMAIN);
+
+	PROC SQL NOPRINT;
+	    SELECT MEMNAME INTO :DS SEPARATED BY " "  
+	    FROM DICTIONARY.members  
+	    WHERE LIBNAME = "&DOMAIN" AND SUBSTR(MEMNAME,1,%SYSFUNC(LENGTH(&DB)))="&DB";  
+	    quit;
+	%LET DSN=%EVAL(%SYSFUNC(COUNTC(&DS,' '))+1);
+	%DO I=1 %TO &DSN;
+	    PROC CONTENTS DATA=&DOMAIN..%SCAN(&DS,&I," ") OUT=contents&I 
+			(keep= libname memname memlabel name type length label format formatl informat informl rename=(type=type1)) 
+			NOPRINT;
+			format  
+	         %include &FMT; ;
+
+	    run;
+	    data Meta_&DB;
+	        %IF &I=1 %THEN %DO;
+	            set contents&I;
+	        %END;
+	        %ELSE %DO;
+	            set Meta_&DB contents&I;
+	        %END;
+	    run;
+	%END;
+	PROC DATASETS;
+        delete contents1-contents&I;
+        run;
+	data Meta_&DB;
+		set Meta_&DB ;
+		length type $ 4 spec $ 12 formatdot $ 32 informatdot $ 32;
+		if type1=1 then do;
+			type='Num';
+			if formatl > 0 then CALL CATS (formatdot, format, put(formatl,$12.),'.');
+				else CALL CATS (formatdot, format, '.');
+			if informl > 0 then CALL CATS (informatdot, informat, put(informl,$12.),'.');
+				else CALL CATS (informatdot, informat, '.');
+		end;
+		else do;
+			type='Char';
+			CALL CATS (formatdot, format, '.');
+			CALL CATS (informatdot, informat, '.');
+		end;
+		if formatdot in ('$.','.') then formatdot='';
+		if informatdot in ('$.','.') then informatdot='';
+		drop type1 formatl informl;
+	run;
+%MEND META;
+
+
+

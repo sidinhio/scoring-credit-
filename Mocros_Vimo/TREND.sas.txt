@@ -1,0 +1,466 @@
+/*___________________________________________________________________
+  ¦ MACRO:       TREND                                              ¦
+  ¦ JOB:         Data Quality                                       ¦
+  ¦ PROGRAMMER:  Mahmoud Azimaee                                    ¦
+  ¦ DATE:        April 2011                                         ¦
+  ¦ DESCRIPTION: For a given table, this Macro perfoms a trend      ¦ 
+  ¦              analysis over a specified time range. The results  ¦ 
+  ¦              will be only in graphic formats.                   ¦ 
+  ¦              The Graph(s) will be shown on screen and also will ¦ 
+  ¦              be saved in PNG format in                          ¦
+  ¦              /dq/saswork/[USERNAME]/ under name of [DS].PNG     ¦
+  ¦ PARAMETERS:  DS= Name of Dataset                                ¦	
+  ¦              STARTYR= Beginning fiscal year (1st part, 4-digit) ¦
+  ¦              ENDYR= Ending fiscal year (1st part, 4-digit)      ¦
+  ¦              BYDATE= Desired Date variable (Must be SAS Date)   ¦
+  ¦              BYVAR= An optional categorical variable. If omitted¦ 
+  ¦              only one trend analysis will be done for all the   ¦
+  ¦              records in the table.                              ¦
+  ¦              BYFMT= An optional Format for BYVAR if there exists¦
+  ¦              any.                                               ¦
+  ¦              BYMONTH= Assign value of YES to this optional      ¦
+  ¦              parameter to force analysis by month instead of    ¦
+  ¦              fiscal year(default value is NO means fiscal year) ¦
+  ¦ EXAMPLE:     %TREND (DS=health.wrha_ccic_med_2003mar,           ¦
+  ¦                      STARTYR=2003,                              ¦
+  ¦                      ENDYR=2010,                                ¦
+  ¦                      BYDATE=admit_dt,                           ¦
+  ¦                      BYVAR=HOSP);                               ¦	
+  ¦ EXAMPLE:     TREND (DS=health.MHCPL_virustests_19922010,        ¦
+  ¦                     STARTYR=1992,                               ¦
+  ¦                     ENDYR=2009,                                 ¦
+  ¦                     BYDATE=RECEIVEDDT);                         ¦
+  ¦ EXAMPLE:     TREND (DS=health.MHCPL_virustests_19922010,        ¦
+  ¦                     STARTYR=1992,                               ¦
+  ¦                     ENDYR=2009,                                 ¦
+  ¦                     BYDATE=RECEIVEDDT                           ¦
+  ¦                     BYFMT=$HOSPFMTL.);                          ¦
+  ¦ EXAMPLE:     TREND (DS=health.MHCPL_virustests_19922010,        ¦
+  ¦                     STARTYR=1992,                               ¦
+  ¦                     ENDYR=2009,                                 ¦
+  ¦                     BYDATE=RECEIVEDDT                           ¦
+  ¦                     MONTHLY=YES);                               ¦
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*/
+
+
+**********************************************************************;
+
+
+
+
+%Macro TREND(DS=, STARTYR=, ENDYR=, BYDATE=, BYVAR=_ALL_, BYFMT=, BYMONTH=NO);
+
+%PUT ___________________________________________________________________;
+%PUT ¦ MACRO:        TREND                                              ¦;
+%PUT ¦ JOB:          Data Quality                                       ¦;
+%PUT ¦ PROGRAMMER:   Mahmoud Azimaee                                    ¦;
+%PUT ¦ DATE:         April 2011                                         ¦;
+%PUT ¦ Running for:  &DS;
+%PUT ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯;
+
+    %LET BYMONTH=%UPCASE(&BYMONTH);
+	libname a_devel sasspds 'devel' host='spds' serv='5190' user="&spdsuser" passwd="&spdspw" aclspecial=yes;
+	data a_devel.Data_Temp;
+		%IF &BYVAR =_ALL_ %THEN set &DS (keep=&BYDATE);;
+		%IF &BYVAR ^=_ALL_ %THEN set &DS (keep=&BYDATE &BYVAR);;
+		run;
+	%IF &BYMONTH=NO %THEN %DO;
+		%fiscalyr(&STARTYR,&ENDYR) ;; 
+		%include "/dq/saswork/&spdsuser/temp_fy.sas";;		/*where /dq/saswork/&spdsuser is the directory temp_fy.sas is saved*/
+	%END;
+	%IF &BYMONTH=YES %THEN %DO;
+		%monthly(&STARTYR,&ENDYR);; 
+		%include "/dq/saswork/&spdsuser/temp_monthly.sas";;	/*where /dq/saswork/&spdsuser is the directory temp_monthly.sas is saved*/
+	%END;
+	data a_devel.Data_Temp;
+		set a_devel.Data_Temp;
+		length trend_by $ 64 ;
+		%IF &BYMONTH=NO %THEN yr=put(&BYDATE,fy.);;
+		%IF &BYMONTH=YES %THEN yr=put(&BYDATE,monthly.);;
+		%IF &BYVAR =_ALL_ %THEN trend_by="&BYVAR";;
+		%IF &BYVAR ^=_ALL_ & &BYFMT= %THEN trend_by=&BYVAR;;
+		%IF &BYVAR ^=_ALL_ & &BYFMT^= %THEN trend_by=put(&BYVAR,&BYFMT);;
+
+	run;
+	
+	proc freq data=a_devel.Data_Temp noprint;
+		table yr*trend_by / list out=trend_data sparse;
+		run;
+		
+	data trend_data;
+		set trend_data;
+		by yr;
+		if yr in ('Other Years', 'unknown' , '') then delete;
+		else sup=0;
+		if substr(yr,1,3)='JAN' then monthyr= substr(yr,4)||'01';
+		if substr(yr,1,3)='FEB' then monthyr= substr(yr,4)||'02';
+		if substr(yr,1,3)='MAR' then monthyr= substr(yr,4)||'03';
+		if substr(yr,1,3)='APR' then monthyr= substr(yr,4)||'04';
+		if substr(yr,1,3)='MAY' then monthyr= substr(yr,4)||'05';
+		if substr(yr,1,3)='JUN' then monthyr= substr(yr,4)||'06';
+		if substr(yr,1,3)='JUL' then monthyr= substr(yr,4)||'07';
+		if substr(yr,1,3)='AUG' then monthyr= substr(yr,4)||'08';
+		if substr(yr,1,3)='SEP' then monthyr= substr(yr,4)||'09';
+		if substr(yr,1,3)='OCT' then monthyr= substr(yr,4)||'10';
+		if substr(yr,1,3)='NOV' then monthyr= substr(yr,4)||'11';
+		if substr(yr,1,3)='DEC' then monthyr= substr(yr,4)||'12';
+		drop PERCENT;
+		run;
+
+	proc sort data=trend_data;
+		%IF &BYMONTH=NO %THEN by trend_by yr;;
+		%IF &BYMONTH=YES %THEN by trend_by monthyr;;
+		run;
+
+	*** Do the transformations;
+	data trend_data;
+		set trend_data;
+		%IF &BYMONTH=NO %THEN by trend_by yr;;
+		%IF &BYMONTH=YES %THEN by trend_by monthyr;;
+		%IF &BYMONTH=NO %THEN %DO;
+			retain firstyr;
+			time=input(substr(yr,1,4),4.);;
+			COUNT1=lag(COUNT);;
+			if first.trend_by then firstyr=time;;
+			time=time - firstyr + 1;;
+		%END;
+		if first.trend_by then time=0;
+		time + 1;
+		time2=time*time;
+		logtime=log(time);
+		sqrttime=sqrt(time);
+		exptime=exp(time);
+		inverstime=1/time;
+		negexptime=exp(-time);
+		run;
+
+	*** Find the best Regression Model by Minimum RSME;
+	proc reg data=trend_data outest=parms noprint; 
+		Linear: model COUNT=Time / EDF ; 
+		Quatratic: model COUNT=Time2 / EDF ; 
+		Exponential: model COUNT=exptime / EDF ; 
+		Logaritmic: model COUNT=logtime / EDF ; 
+		SQRT: model COUNT=sqrttime / EDF ; 
+		Inverse: model COUNT=inverstime / EDF ; 
+		Neg_Exponential: model COUNT=negexptime / EDF ; 
+		by trend_by;
+	run;
+
+	Proc means data=parms noprint;
+		var _RMSE_ ;
+		by trend_by;
+		output out=RMSE (keep=trend_by RMSE) MIN=RMSE;
+		run;
+
+	data parms;
+		merge parms RMSE;
+		by trend_by;
+		if _RMSE_ = RMSE;
+		rename _RSQ_ = RSQ _MODEL_ = Model;
+		keep trend_by _MODEL_ RMSE _RSQ_ ;
+		run;
+
+	data trend_data;
+		merge trend_data parms;
+		by trend_by;
+		if time=1 then COUNT1=.;
+		if count=count1 & COUNT ^in (0, 5.999) then same=1;
+			else same=0;
+		run;
+
+	***Fit the best model for each subset of data and save the regression coefficients and Studentized residuals;
+	data res_lin res_quad res_exp res_log res_sqrt res_inv res_neg;
+		length COUNT 8. trend_by $ 64.;
+		run;
+	proc reg data=trend_data outest=parm_lin noprint; 
+		Linear: model COUNT=Time; 
+		by trend_by;
+		output out=res_lin RSTUDENT=STR;
+		format time time.;
+		where model='Linear';
+	run;
+
+	proc reg data=trend_data outest=parm_quad noprint; 
+		Quatratic: model COUNT=Time2; 
+		by trend_by;
+		output out=res_quad RSTUDENT=STR;
+		format time time.;
+		where model='Quatratic';
+	run;
+
+	proc reg data=trend_data outest=parm_exp noprint;  
+		Exponential: model COUNT=exptime; 
+		by trend_by;
+		output out=res_exp RSTUDENT=STR;
+		format time time.;
+		where model='Exponential';
+	run;
+
+	proc reg data=trend_data outest=parm_log noprint;   
+		Logaritmic: model COUNT=logtime ; 
+		by trend_by;
+		output out=res_log RSTUDENT=STR;
+		format time time.;
+		where model='Logaritmic';
+	run;
+
+	proc reg data=trend_data outest=parm_sqrt noprint;    
+		SQRT: model COUNT=sqrttime ; 
+		by trend_by;
+		output out=res_sqrt RSTUDENT=STR;
+		format time time.;
+		where model='SQRT';
+	run;
+
+	proc reg data=trend_data outest=parm_inv noprint;     
+		Inverse: model COUNT=inverstime ; 
+		by trend_by;
+		output out=res_inv RSTUDENT=STR;
+		format time time.;
+		where model='Inverse';
+	run;
+
+	proc reg data=trend_data outest=parm_neg noprint;     
+		Neg_Exponential: model COUNT=negexptime ; 
+		by trend_by;
+		output out=res_neg RSTUDENT=STR;
+		format time time.;
+		where model='Neg_Exponential';
+	run;
+
+	data parm_all;
+		set parm_lin parm_quad parm_exp parm_log parm_sqrt parm_inv parm_neg;
+		by trend_by;
+		array beta{7} time time2 exptime logtime sqrttime inverstime negexptime;
+		do i=1 to 7;
+			if  beta{i} ^=. then Beta1=beta{i};
+		end;
+		keep trend_by intercept beta1;
+		run;
+	data parms;
+		merge parms parm_all;
+		by trend_by;
+		run;
+	data trend_data;
+		merge trend_data parms;
+		by trend_by;
+		if Model='Linear' then yhat=intercept + beta1*time;
+		if Model='Quatratic' then yhat=intercept + beta1*time2;
+		if Model='Exponential' then yhat=intercept + beta1*exptime;
+		if Model='Logaritmic' then yhat=intercept + beta1*logtime;
+		if Model='SQRT' then yhat=intercept + beta1*sqrttime;
+		if Model='Inverse' then yhat=intercept + beta1*inverstime;
+		if Model='Neg_Exponential' then yhat=intercept + beta1*negexptime;
+		run;
+	data res_all;
+		set res_lin res_quad res_exp res_log res_sqrt res_inv res_neg;
+		by trend_by;
+		if YR^='';
+		keep YR trend_by STR monthyr;
+		run;
+	proc freq data=trend_data noprint;
+		table yr / list out=t;
+		run;
+	%GETNOBS(t);
+	data t;
+		set t;
+		call SYMPUT('t',tinv(.95,%EVAL(&NO-2-1)));
+		run;
+	data trend_data;
+		length model2 $30 trend_by2 $64;
+		merge trend_data res_all;
+		%IF &BYMONTH=NO %THEN by trend_by yr;;
+		%IF &BYMONTH=YES %THEN by trend_by monthyr;;
+		t=SYMGETN('t');
+		label t='t(.95,n-p-1)';
+		if (t < STR)  | (STR < -t) then outlier=1;
+			else outlier=0;
+		if Model='Linear' 		   then model2='Y=Beta0 + Beta1*X      ';
+		if Model='Quatratic' 	   then model2='Y=Beta0 + Beta1*X^2    ';
+		if Model='Exponential'     then model2='Y=Beta0 + Beta1*exp(X) ';
+		if Model='Logaritmic'      then model2='Y=Beta0 + Beta1*log(X) ';
+		if Model='SQRT' 		   then model2='Y=Beta0 + Beta1*SQRT(X)';
+		if Model='Inverse' 		   then model2='Y=Beta0 + Beta1*(1/X)  ';
+		if Model='Neg_Exponential' then model2='Y=Beta0 + Beta1*Exp(-X)';
+		if trend_by='_ALL_' then trend_by2='All Records';
+			else trend_by2=trend_by;
+		if 0 < COUNT < 6 then do;
+			COUNT=3;
+			sup=1;
+			end;
+		Lable trend_by2='By Variable';
+		run;
+	data graphlabel(keep=function xsys ysys xc y text color position size trend_by trend_by2);
+		set trend_data;
+		by trend_by2;
+		* Define annotate variable attributes;
+		length color function $8 text $30;
+		retain 	function 'symbol' 
+				xsys ysys '2'
+				color 'red'
+				position '2'
+				size 1.8;
+		if outlier=1 then do;
+			* Create a label;
+			text = 'dot';
+			%IF &BYMONTH=NO %THEN xc=yr;;
+			%IF &BYMONTH=YES %THEN xc=monthyr;;
+			y=count;
+			output graphlabel;
+			end;
+		run;
+
+	data graphlabel2(keep=function xsys ysys xc y text color position size trend_by trend_by2);
+		set trend_data;
+		%IF &BYMONTH=NO %THEN by trend_by2 yr;;
+		%IF &BYMONTH=YES %THEN by trend_by2 monthyr;;
+		* Define annotate variable attributes;
+		length color function $8 text $30;
+		retain 	function 'label' 
+				xsys ysys '2'
+				color 'vibg'
+				position '6'
+				size 1;
+		%IF &BYMONTH=NO %THEN if last.trend_by2 & last.yr then do;;
+		%IF &BYMONTH=YES %THEN if last.trend_by2 & last.monthyr then do;;
+			* Create a label;
+			text = model2;
+			%IF &BYMONTH=NO %THEN xc=yr;;
+			%IF &BYMONTH=YES %THEN xc=monthyr;;
+			y=yhat;
+			output graphlabel2;
+			end;
+		run;
+
+	data graphlabel3(keep=function xsys ysys xc y text color position size trend_by trend_by2);
+		set trend_data;
+		%IF &BYMONTH=NO %THEN by trend_by2 yr;;
+		%IF &BYMONTH=YES %THEN by trend_by2 monthyr;;
+		* Define annotate variable attributes;
+		length color function $8 text $30;
+		retain 	function 'symbol' 
+				xsys ysys '2'
+				color 'green'
+				position '2'
+				size 2.2;
+		if sup=1 then do;
+			* Create a label;
+			text = 'circle';
+			%IF &BYMONTH=NO %THEN xc=yr;;
+			%IF &BYMONTH=YES %THEN xc=monthyr;;
+			y=count;
+			output graphlabel3;
+			end;
+		run;
+	data graphlabel4(keep=function xsys ysys xc y text color position size trend_by trend_by2);
+		set trend_data;
+		%IF &BYMONTH=NO %THEN by trend_by2 yr;;
+		%IF &BYMONTH=YES %THEN by trend_by2 monthyr;;
+		* Define annotate variable attributes;
+		length color function $8 text $30;
+		retain 	function 'symbol' 
+				xsys ysys '2'
+				color 'orange'
+				position '2'
+				size 1.8;
+		if same=1 then do;
+			* Create a label;
+			text = 'dot';
+			%IF &BYMONTH=NO %THEN xc=yr;;
+			%IF &BYMONTH=YES %THEN xc=monthyr;;
+			y=count;
+			output graphlabel4;
+			end;
+		run;
+
+	data graphlabel;
+		set graphlabel graphlabel2 graphlabel3 graphlabel4;
+		by trend_by2;
+		run;
+	goptions reset=all noborder cback=white htitle=12pt htext=9pt;   
+	SYMBOL1 i=join l=1 w=3 v=dot color='blue'  h=1 pointlabel = none;
+	SYMBOL2 i=join l=20 v=dot c=vibg h=.01 pointlabel=none ;
+	title1 f=zapfb h=1 c=blue "Trend Analysis for Dataset: &DS";
+	title2 f=zapfb h=.8 "Date Variable: &BYDATE, By Variable: &BYVAR";
+	footnote1 justify=c f=zapfb height=.8 
+			  c=red box=1 bspace=0 bcolor=red '  '
+			  justify=l c=black  '                                                        Significant outliers';
+	footnote2 justify=c f=zapfb height=.8 
+			  c=orange box=1 bspace=0 bcolor=orange '  '
+			  justify=l c=black  '                                          Identical Subsequent frequencies';
+	footnote3 justify=c f=zapfb height=.8 
+			  c=green box=1 bspace=0 bcolor=green '  '
+			  justify=l c=black  '                             Suppressed small frequencies (between 0 to 6)';
+	%IF &BYMONTH=NO %THEN 
+		  axis1  minor=none value=( h=.9 angle=90) offset=(3,20) 
+	      label=('Fiscal Year');;
+	%IF &BYMONTH=YES %THEN 
+		  axis1  minor=none value=( h=.9 ) offset=(3,20) 
+	      label=('Month');;
+	axis2 minor=none offset=(0,3)
+	      label=('Frequency' justify=right );
+
+*** Plot on the Screen only;
+	proc GPLOT data=trend_data;
+		%IF &BYMONTH=NO %THEN 
+		plot COUNT*yr yhat*yr / overlay
+								frame
+								haxis=axis1
+								vaxis=axis2
+								cframe=gwh
+								annotate=graphlabel;;
+		%IF &BYMONTH=YES %THEN 
+		plot COUNT*monthyr yhat*monthyr / overlay
+								frame
+								haxis=axis1
+								vaxis=axis2
+								cframe=gwh
+								annotate=graphlabel;;
+		by trend_by2;
+/*		%IF &BYFMT ^='' %THEN %DO;*/
+/*			format trend_by2 &BYFMT;*/
+/*			%END;*/
+		run;
+	quit;
+*** Re-Plotting for output PNG format;
+	goptions device=png gsfname=graphout;   
+	filename graphout "/dq/saswork/&spdsuser/";	/*where /dq/saswork/&spdsuser/ is the directory to save sas graph*/
+	proc GPLOT data=trend_data;
+		%IF &BYMONTH=NO %THEN 
+		plot COUNT*yr yhat*yr / overlay
+								frame
+								haxis=axis1
+								vaxis=axis2
+								cframe=gwh
+								annotate=graphlabel;;
+		%IF &BYMONTH=YES %THEN 
+		plot COUNT*monthyr yhat*monthyr / overlay
+								frame
+								haxis=axis1
+								vaxis=axis2
+								cframe=gwh
+								annotate=graphlabel;;
+		by trend_by2;
+/*		%IF &BYFMT ^='' %THEN %DO;*/
+/*			format trend_by2 &BYFMT;*/
+/*			%END;*/
+		run;
+	quit;
+	goptions reset=all;
+	proc Datasets lib=work;
+		delete data_temp graphlabel graphlabel2-graphlabel4 parms parm_all parm_lin parm_exp parm_inv parm_log
+			   parm_neg parm_quad parm_sqrt res_all res_exp res_inv res_lin res_log res_neg res_quad res_sqrt 
+			   rmse t trend_data;
+	run;
+
+	proc Datasets lib=a_devel;
+		delete Data_Temp;
+	run;
+
+	quit;
+
+
+%MEND TREND;
+
+
+

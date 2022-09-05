@@ -1,0 +1,200 @@
+/*___________________________________________________________________
+  ¦ MACRO:       INVALID                                            ¦
+  ¦ JOB:         Data Quality                                       ¦
+  ¦ PROGRAMMER:  Mahmoud Azimaee                                    ¦
+  ¦ DATE:        July 2011                                          ¦
+  ¦ DESCRIPTION: This is an intermediate macro and is called from   ¦
+  ¦              VIMO macros. It checks values of character variavls¦ 
+  ¦              and compare them with their corresponding formats  ¦ 
+  ¦              and calculates percentage of invalid codes and adds¦
+  ¦              it to VIMO table. Also a list  of invalid codes    ¦
+  ¦              will be added to Comment column in VIMO table      ¦
+  ¦ PARAMETERS:  DS= Name of Dataset                                ¦	
+  ¦ EXAMPLE:     %INVALID(DS=health.MHCPL_virustests_19922010);     ¦
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*/
+
+
+**********************************************************************;
+
+
+
+%MACRO INVALID(DS= );
+
+%PUT ___________________________________________________________________;
+%PUT ¦ Manitoba Centre for Health policy (MCHP)                         ¦;
+%PUT ¦ MACRO:        INVALID                                            ¦;
+%PUT ¦ JOB:          Data Quality                                       ¦;
+%PUT ¦ PROGRAMMER:   Mahmoud Azimaee                                    ¦;
+%PUT ¦ DATE:         JULY 2011                                          ¦;
+%PUT ¦ Running for:  &DS;
+%PUT ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯;
+
+
+
+	%GETVARLIST(&DS);
+	data formats;
+		set common.metadata;
+  		%IF &CLUSTER=YES %THEN %DO;
+			if libname="&LIB_ORIG" & memname="&DSN"  & format^='';
+		%END;
+		%ELSE %DO;
+			if libname="&LIB" & memname="&DSN" & format^='';
+		%END;
+	run;
+	PROC SQL NOPRINT;
+		SELECT FORMAT INTO :FMTLIST SEPARATED BY " "  
+		  FROM FORMATS
+		WHERE FORMAT NE "$";
+	QUIT;
+	proc format library=work.formats  cntlout=fmtvalue1 (keep=FMTNAME START LABEL rename=(START=VALUE));
+		select &FMTLIST; ;
+	proc format library=library9.formats  cntlout=fmtvalue2 (keep=FMTNAME START LABEL rename=(START=VALUE));
+		select &FMTLIST; ;
+	run;
+	data fmtvalue;
+		length value $32 ;
+		set fmtvalue1 fmtvalue2;
+		value=compress(value);
+		run;
+	proc sort data=fmtvalue out=values nodupkey;
+		by fmtname;
+		run;
+	data formats;
+		set formats;
+		if substr(format, 1, 1)='$' then format=substr(format, 2);
+		run;
+	proc sort data=formats ;
+		by format;
+		run;
+	data formats;
+		merge formats (in=in_format) values (in=in_value rename=(fmtname=format));
+		by format;
+		if in_format & in_value;
+		if type='Char' then format='$'||format;
+		run;
+	PROC SQL NOPRINT;
+		SELECT NAME INTO :VARLIST SEPARATED BY " "  
+		  FROM FORMATS;
+		SELECT FORMAT INTO :FMTLIST SEPARATED BY " "  
+		  FROM FORMATS;
+	QUIT;
+
+	%LET DOI=%EVAL(%SYSFUNC(COUNTC(&VARLIST,' '))+1);
+	%DO I=1 %TO &DOI;
+		%LET VAR=%SCAN(&VARLIST,&I," ");
+		%LET FMT=%SCAN(&FMTLIST,&I," ");	
+		%IF %SUBSTR(&FMT,1,1)=$ %THEN %DO;
+			proc sql;
+			  create table SQL&I as 
+			  select put(&VAR, $32.) as VALUE ,
+					 count(&VAR) as Count
+					 from &LIB..&DSN
+			  group by (&VAR)
+			  order by VALUE;
+			  quit;
+		%END;
+		%ELSE %DO;
+			proc sql;
+			  create table SQL&I as 
+			  select put(&VAR, BEST32.) as VALUE ,
+					 count(&VAR) as Count
+					 from &LIB..&DSN
+			  group by (&VAR)
+			  order by VALUE;
+			  quit;
+		%END;
+		data SQL&I;
+			set sql&I;
+			length VARNAME FMTNAME $32;
+			FMTNAME=SYMGETC('FMT');
+			VARNAME=SYMGETC('VAR');
+		run;
+
+	%END;
+	Data Values;
+		length value $32 ;
+		set SQL1 - SQL&DOI;
+		value=compress(value);
+		value_data=value;
+		if substr(FMTNAME, 1, 1)='$' then FMTNAME=substr(FMTNAME, 2);
+	run;	
+	proc sort data=fmtvalue;
+		by FMTNAME Value;
+		run;
+	data fmtvalue;
+		set fmtvalue;
+		retain other;
+		by FMTNAME Value;
+		if first.FMTNAME then other=0;
+		if first.FMTNAME & value='**OTHER**' then other=1;
+		run;
+	data fmtvalue;
+		set fmtvalue;
+		value_fmt=value;
+		run;
+	proc sort data=values;
+		by FMTNAME value;
+		run;
+	proc sort data=fmtvalue;
+		by FMTNAME value;
+		run;
+	data invalid_all;
+		merge values (in=in_value) fmtvalue ;
+		by fmtname value;
+		if other=. then other=0;
+		VARNAME=UPCASE(VARNAME);
+		keep value count varname FMTname value_data value_FMT other; 
+		run;
+	proc sort data=invalid_all;
+		by FMTNAME descending other;
+		run;
+	data invalid_all;
+		set invalid_all;
+		retain other2;
+		by FMTNAME;
+		if first.FMTNAME then other2=0;
+		if first.FMTNAME & other=1 then other2=1;
+		run;	
+	proc means data=invalid_all noprint;
+		 class VARNAME;
+		 var COUNT;
+		 where ^other2 & value_data ^= value_fmt; 
+		 output out=Invalid Sum=Invalid;
+		 run;
+	data Invalid;
+		set invalid;
+		if _TYPE_ = 1;
+		drop _TYPE_ _FREQ_ ;
+		label Invalid='# of Invalid Codes';
+		run;
+	data invalid_all;
+		set invalid_all;
+		if value_data ^= value_fmt & count^=. & ^other2 & value_data ^in ('','.');
+		run;
+	proc sort data=invalid_all;
+		by varname FMTNAME ;
+		run;
+	title 'List of Mismatching values with Formats';
+	proc print data=invalid_all noobs;
+		var value count;
+		by varname FMTNAME ;
+		run;
+	%DO I=1 %TO &DOI;
+		%LET VAR=%UPCASE(%SCAN(&VARLIST,&I," "));
+		PROC SQL NOPRINT;
+			SELECT VALUE INTO :INVALID SEPARATED BY ", "  
+			  FROM INVALID_ALL
+			  WHERE VARNAME="&VAR" ;
+		QUIT;
+	data invalid;
+		set invalid;
+		length INVALID_CODES $ 500 ;
+		if VARNAME="&VAR" & Invalid^=0 then INVALID_CODES='Invalid Codes: ' ||SYMGETC('INVALID');
+		VARNAME=UPCASE(VARNAME);
+		run;
+	%END;
+	PROC DATASETS;
+		delete 	SQL1 - SQL&DOI fmtvalue fmtvalue1 fmtvalue2 values formats;
+		run;
+%MEND INVALID;
+

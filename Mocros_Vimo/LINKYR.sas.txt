@@ -1,0 +1,103 @@
+/*____________________________________________________________________
+  ¦ MACRO:       LINKYR                                              ¦
+  ¦ JOB:         Data Quality                                        ¦
+  ¦ PROGRAMMER:  Mahmoud Azimaee                                     ¦
+  ¦ DATE:        December 2011                                       ¦
+  ¦ DESCRIPTION: For a single table (or a whole cluster) this macro  ¦ 
+  ¦              creates a table for Percentage of linkable records. ¦           
+  ¦              The table will be shown on screen and also will be  ¦
+  ¦              saved in Excel format in /dq/saswork/[USERNAME]/    ¦
+  ¦              under name of:                                      ¦
+  ¦              [LIBNAME]_[DSNAME]_linkability_over_years.xls       ¦
+  ¦ PARAMETERS:  DS= Name of Dataset                                 ¦	
+  ¦              STARTYR= Beginning fiscal year (1st part, 4-digit)  ¦
+  ¦              ENDYR= Ending fiscal year (1st part, 4-digit)       ¦
+  ¦              BYDATE= Desired Date variable (Must be SAS Date)    ¦
+  ¦              PHIN= Name of PHIN variable(Default=SCRPHIN)        ¦	
+  ¦              TYPE= Name of PHINTYPE variable(Default=SCRPHINTYPE)¦	
+  ¦ EXAMPLE:     %LINKYR(DS=HEALTH.MHCPL_SPSEROTESTS_19922010,       ¦
+  ¦                      STARTYR=1992,                               ¦
+  ¦                      ENDYR=2009,                                 ¦
+  ¦                      BYDATE=RECEIVEDDT);                         ¦	
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*/
+
+
+**********************************************************************;
+
+
+%MACRO LINKYR(DS=, STARTYR=, ENDYR=, BYDATE=, PHIN=SCRPHIN, TYPE=SCRPHINTYPE);
+
+%PUT ___________________________________________________________________;
+%PUT ¦ Manitoba Centre for Health policy (MCHP)                         ¦;
+%PUT ¦ MACRO:        LINKYR                                             ¦;
+%PUT ¦ JOB:          Data Quality                                       ¦;
+%PUT ¦ PROGRAMMER:   Mahmoud Azimaee                                    ¦;
+%PUT ¦ DATE:         December 2011                                      ¦;
+%PUT ¦ Running for:  &DS;
+%PUT ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯;
+
+   %LET BYDATE=%UPCASE(&BYDATE);
+   %LET LIBNAME = ;
+   %LET DSNAME = ;
+
+	%***Single level data set name;
+   %IF %INDEX(&DS,.) = 0 %THEN %DO; 
+      %LET LIBNAME = WORK;
+      %LET DSNAME = %UPCASE(&DS);
+   %END;
+
+   %***Two level data set name;
+   %ELSE %DO; 
+      %LET LIBNAME = %UPCASE(%SCAN(&DS,1,"."));
+      %LET DSNAME = %UPCASE(%SCAN(&DS,2,"."));
+   %END;
+
+	%fiscalyr(&STARTYR,&ENDYR) ;; 
+	%include "/dq/saswork/&spdsuser/temp_fy.sas";;
+
+	data &DSNAME;
+		set &LIBNAME..&DSNAME (keep= &PHIN &TYPE &BYDATE);
+		yr=put(&BYDATE,fy.);;
+		if yr ^='Other Years';
+		run;
+
+		%DO years=&STARTYR %TO &ENDYR;
+			data &DSNAME._y&years;
+				set &DSNAME;
+				if substr(yr,1,4)=&years ;
+				run;
+			%LINK (DOMAIN=WORK,
+			       DB=&DSNAME._y&years,
+				   PHIN=&PHIN,
+				   TYPE=&TYPE);
+			data linkability;
+				set linkability;
+				year= SYMGETC('years');
+				year2=input(year,4.)+1;
+				year=COMPRESS(year || '/' || year2);
+				run;
+			data linkability_over_years;
+				%IF &YEARS=&STARTYR %THEN set linkability (keep= year Percentage_Linkable_Records rename=(Percentage_Linkable_Records=&DSNAME)); 
+				%ELSE set linkability_over_years linkability (keep= year Percentage_Linkable_Records rename=(Percentage_Linkable_Records=&DSNAME)); ;
+				run;
+			filename delfile1 "/dq/saswork/&spdsuser/WORK_&DSNAME._Y&years._PHINTYPE.xls";
+			filename delfile2 "/dq/saswork/&spdsuser/WORK_&DSNAME._Y&years._LINKABILITY.xls";
+			data _NULL_ ;
+				rc=FDELETE ('delfile1');
+				rc=FDELETE ('delfile2');
+				run;
+		%END;
+
+		Proc Print data=linkability_over_years;
+			run;
+		PROC EXPORT DATA= WORK.linkability_over_years
+	            OUTFILE= "/dq/saswork/&spdsuser/&LIBNAME._&DSNAME._linkability_over_years.xls"
+	            DBMS=XLS REPLACE;
+		run;
+		PROC DATASETS lib=WORK;
+			delete linkability_over_years linkability &DSNAME &DSNAME._Y&STARTYR - &DSNAME._Y&ENDYR;
+			quit;run;
+
+%Mend LINKYR;
+
+

@@ -1,0 +1,148 @@
+/*____________________________________________________________________
+  ¦ MACRO:       POSTMUN                                             ¦
+  ¦ JOB:         Data Quality                                        ¦
+  ¦ PROGRAMMER:  Mahmoud Azimaee                                     ¦
+  ¦ DATE:        October 2011                                        ¦
+  ¦ DESCRIPTION: This intermediate macro is called through the VIMO  ¦
+  ¦              macro if user asks for Postal and Municipal code    ¦ 
+  ¦              validation. Percentage of postal and municipal codes¦
+  ¦              which don’t match with the Canadian patterns for    ¦
+  ¦              these codes will be reported in Invalid code column ¦ 
+  ¦              and the actual invalid codes will be added to       ¦ 
+  ¦              Comment column of VIMO Table.                       ¦ 
+  ¦ PARAMETERS:  POSTALS= List of variables containing postal codes, ¦	
+  ¦              separated by blank.                                 ¦	
+  ¦              MUNCODES= List of variables containing mun codes,   ¦	
+  ¦              separated by blank.                                 ¦	
+  ¦ EXAMPLE:     %POSTMUN(POSTALS=POSTAL p_code_original,            ¦	
+  ¦                       MUNCODES=MUNCODE_CHILD MUNCODE_SCH );      ¦	
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*/
+
+
+**********************************************************************;
+
+
+%MACRO POSTMUN(POSTALS=, MUNCODES= );
+
+%PUT ___________________________________________________________________;
+%PUT ¦ Manitoba Centre for Health policy (MCHP)                         ¦;
+%PUT ¦ MACRO:        POSTMUN                                            ¦;
+%PUT ¦ JOB:          Data Quality                                       ¦;
+%PUT ¦ PROGRAMMER:   Mahmoud Azimaee                                    ¦;
+%PUT ¦ DATE:         October 2011                                       ¦;
+%PUT ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯;
+
+
+
+	%LET POSTALS=%UPCASE(&POSTALS);
+	%LET MUNCODES=%UPCASE(&MUNCODES);
+	%LET POSTN=%EVAL(%SYSFUNC(COUNTC(&POSTALS,' '))+1);
+	%IF &POSTALS= %THEN %GOTO MUN;
+	%DO I=1 %TO &POSTN;
+		%LET POSTAL=%SCAN(&POSTALS,&I," ");
+		data postal&I;
+			set &LIB..&DSN (keep= &POSTAL);
+			if anyalpha(COMPRESS(&POSTAL),1)=1 & anyalpha(COMPRESS(&POSTAL),3)=3 & anyalpha(COMPRESS(&POSTAL),5)=5 &
+			   anydigit(COMPRESS(&POSTAL),2)=2 & anydigit(COMPRESS(&POSTAL),4)=4 & anydigit(COMPRESS(&POSTAL),6)=6 
+			   then valid=1;
+				else valid=0;
+			if &POSTAL='' | valid then delete;
+			run;
+			proc means data=postal&I noprint;
+				var valid;
+				output N= out=POSTAL_N&I (keep= _FREQ_ rename=(_FREQ_ = Invalid_n));
+				run;
+			proc sort data=postal&I nodupkey;
+				by &POSTAL;
+				run;
+			PROC SQL NOPRINT;
+				SELECT &POSTAL INTO :INVALID SEPARATED BY ", "  
+				  FROM postal&I;
+			QUIT;
+			data TEMP;
+				VARNAME=SYMGETC('POSTAL');
+				run;
+			%GETNOBS(POSTAL_N&I);
+			%IF &NO=0 %THEN %DO;
+				data POSTAL_N&I;
+					set POSTAL_N&I TEMP;
+					run;
+			%END;
+			%ELSE %DO;
+				data POSTAL_N&I;
+					set POSTAL_N&I ;
+					length INVALID_CODES $ 500 ;
+					VARNAME=SYMGETC('POSTAL');
+					INVALID_CODES='Invalid Codes: ' ||SYMGETC('INVALID');
+					run;
+			%END;
+	%END;
+	data POSTALS;
+		set POSTAL_N1 - POSTAL_N&POSTN;
+		if invalid_n=. then invalid_n=0;
+		run;	
+	%MUN:
+	%IF &MUNCODES= %THEN %GOTO ENDIT;
+	%LET MUNN=%EVAL(%SYSFUNC(COUNTC(&MUNCODES,' '))+1);
+	%DO I=1 %TO &MUNN;
+		%LET MUNCODE=%SCAN(&MUNCODES,&I," ");
+		data MUNCODE&I;
+			set &LIB..&DSN (keep= &MUNCODE);
+			length MUN_CHAR $ 4. ;
+			format &MUNCODE ;
+			MUN_CHAR=PUT(COMPRESS(&MUNCODE),$4.);
+			if (anydigit(MUN_CHAR,1)=1 OR SUBSTR(MUN_CHAR,1,1)='A' OR SUBSTR(MUN_CHAR,1,1)='a')&
+			   anydigit(MUN_CHAR,2)=2 & anydigit(MUN_CHAR,3)=3 & Length(STRIP(&MUNCODE))= 3
+			   then valid=1;
+				else valid=0;
+			if &MUNCODE='' | &MUNCODE=. | valid then delete;
+			run;
+			proc means data=MUNCODE&I noprint;
+				var valid;
+				output N= out=MUNCODE_N&I (keep= _FREQ_ rename=(_FREQ_ = Invalid_n));
+				run;
+			proc sort data=MUNCODE&I nodupkey;
+				by MUN_CHAR;
+				run;
+			PROC SQL NOPRINT;
+				SELECT MUN_CHAR INTO :INVALID SEPARATED BY ", "  
+				  FROM MUNCODE&I;
+			QUIT;
+			data TEMP;
+				VARNAME=SYMGETC('MUNCODE');
+				run;
+			%GETNOBS(MUNCODE_N&I);
+			%IF &NO=0 %THEN %DO;
+				data MUNCODE_N&I;
+					set MUNCODE_N&I TEMP;
+					run;
+			%END;
+			%ELSE %DO;
+				data MUNCODE_N&I;
+					set MUNCODE_N&I ;
+					length INVALID_CODES $ 500 ;
+					VARNAME=SYMGETC('MUNCODE');
+					INVALID_CODES='Invalid Codes: ' ||SYMGETC('INVALID');
+					run;
+			%END;
+	%END;
+	data MUNCODES;
+		set MUNCODE_N1 - MUNCODE_N&MUNN;
+		if invalid_n=. then invalid_n=0;
+		run;
+	%ENDIT:
+	data POSTMUN;
+		length INVALID_CODES $ 500 ;
+		%IF &POSTALS=  & &MUNCODES^= %THEN set MUNCODES; ;
+		%IF &POSTALS^= & &MUNCODES=  %THEN set POSTALS; ;
+		%IF &POSTALS^= & &MUNCODES^= %THEN set POSTALS MUNCODES; ;
+		VARNAME=UPCASE(VARNAME);
+		run;
+	proc sort data=POSTMUN;
+		by varname;
+		run;
+
+%MEND POSTMUN;
+
+
+

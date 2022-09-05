@@ -1,0 +1,39 @@
+/*___________________________________________________________________
+  ¦ MACRO:       GETNOBS                                            ¦
+  ¦ JOB:         Data Quality                                       ¦
+  ¦ PROGRAMMER:  Mahmoud Azimaee                                    ¦
+  ¦ DATE:        April 2011                                         ¦
+  ¦ DESCRIPTION: This macro returns Number of Observations in the   ¦ 
+  ¦              given dataset through the macro variable NO. It is ¦
+  ¦              an intermediate macro and is used in many other    ¦                                                  ¦              DQ macros                                          ¦
+  ¦ PARAMETERS:  DS= Name of Dataset                                ¦	
+  ¦ EXAMPLE:     %GETNOBS (health.MHCPL_SPsection_19922010);        ¦	
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*/
+
+
+**********************************************************************;
+
+
+%MACRO GETNOBS(DS) ;
+
+%PUT ___________________________________________________________________;
+%PUT ¦ Manitoba Centre for Health policy (MCHP)                         ¦;
+%PUT ¦ MACRO:        GETNOBS                                            ¦;
+%PUT ¦ JOB:          Data Quality                                       ¦;
+%PUT ¦ PROGRAMMER:   Mahmoud Azimaee                                    ¦;
+%PUT ¦ DATE:         April 2011                                         ¦;
+%PUT ¦ Running for:  &DS;
+%PUT ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯;
+
+	%GLOBAL NO;
+	%LET NO=;
+	data _null_;
+	if 0 then set &DS nobs=nobs;
+		call symput('NO',nobs);
+		stop;
+		run;
+%MEND GETNOBS;
+
+
+
+

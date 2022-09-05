@@ -1,0 +1,106 @@
+/*___________________________________________________________________
+  ¦ MACRO:       AUTOLEVEL                                          ¦
+  ¦ JOB:         Data Quality                                       ¦
+  ¦ PROGRAMMER:  Mahmoud Azimaee                                    ¦
+  ¦ DATE:        April 2011                                         ¦
+  ¦ DESCRIPTION: This Macro gets the levels of Character variables  ¦
+  ¦              in a dataset and list them. If there are too many  ¦
+  ¦              then only first and last level will be shown. This ¦
+  ¦              is a intermediate macro and is called by VIMO Macro¦
+  ¦ PARAMETERS:  DS= Name of Dataset                                ¦	
+  ¦ EXAMPLE:     %AUTOLEVEL (health.MHCPL_SPsection_19922010);      ¦	
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*/
+
+
+**********************************************************************;
+
+
+%MACRO AUTOLEVEL(DS);
+
+%PUT ___________________________________________________________________;
+%PUT ¦ Manitoba Centre for Health policy (MCHP)                         ¦;
+%PUT ¦ MACRO:        AUTOLEVEL                                          ¦;
+%PUT ¦ JOB:          Data Quality                                       ¦;
+%PUT ¦ PROGRAMMER:   Mahmoud Azimaee                                    ¦;
+%PUT ¦ DATE:         April 2011                                         ¦;
+%PUT ¦ Running for:  &DS;
+%PUT ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯;
+
+	%LET VARN=;
+   %GETVARLIST(&DS);
+	%LET VARN=%SYSFUNC(COUNTC(&CVARLIST,' '));
+	%LET VARN=%EVAL(&VARN+1);
+
+      %* If there are any character variables, do the following;
+	%IF &CVARLIST NE %THEN %DO;
+		proc contents data=&LIB..&DSN out=content_C noprint;
+			run;
+		data content_C;
+			set content_C (where=(type=2));
+			I + 1;
+			keep NAME I;
+			run;
+
+		%DO I=1 %TO &VARN ;
+			%LET VARNAME&I= ;
+			%LET LEVEL&I= ;
+			PROC SQL NOPRINT;
+			    SELECT NAME INTO :VARNAME&I    
+			    FROM CONTENT_C  
+			    WHERE I = &I; 
+				quit;
+			%LET VAR=&&VARNAME&I;		/* missing & sign added */
+			proc sql;
+			  create table CVOUT&I as 
+			  select &VAR as &VAR,
+					 count(&VAR) as Count
+					 from &LIB..&DSN
+			  group by (&VAR);
+			  quit;
+			%GETNOBS(CVOUT&I);
+			data _NULL_;
+				set CVOUT&I;
+				len=LENGTH(&VAR);
+				call symput('LEN',LEN );
+				run;
+			%IF %EVAL(&NO * (&LEN + 2))> 40  %THEN %DO;
+				data CVOUT&I;
+					set CVOUT&I ;
+					if  %EVAL(&NO) > _N_ > 2 then delete;
+					if _N_=1 & &VAR='' then delete;
+					run;
+				 %GETNOBS(CVOUT&I);
+				data CVOUT&I;
+					set CVOUT&I ;
+					if  &NO=3 then if _N_=2 then delete;
+					run;
+			%GETNOBS(CVOUT&I);
+			proc sql noprint;
+				select &VAR into :LEVEL&I separated by ", ... ,"
+				from CVOUT&I
+				WHERE &VAR ^=" ";
+				quit;
+			%END;
+			%ELSE %DO;
+				proc sql noprint;
+					select &VAR into :LEVEL&I separated by ", "
+					from CVOUT&I
+					WHERE &VAR ^=" ";
+					quit;
+			%END;
+		%END;
+			data CLEVEL;
+				%do J=1 %to &VARN ;
+					VAR = SYMGET("VARNAME&J");
+					if LENGTH(SYMGET("LEVEL&J")) > 35 then  LEVEL = SUBSTR(SYMGET("LEVEL&J"),1,35) || ', ...' ;
+						else LEVEL = SYMGET("LEVEL&J") ;
+					output;
+				%end;
+			run;
+		proc datasets library=work;
+			delete CVOUT1-CVOUT&VARN ;
+			run;
+	%END;
+%MEND AUTOLEVEL;
+
+

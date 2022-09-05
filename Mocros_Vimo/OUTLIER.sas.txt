@@ -1,0 +1,120 @@
+/*___________________________________________________________________
+  ¦ MACRO:       OUTLIER                                            ¦
+  ¦ JOB:         Data Quality                                       ¦
+  ¦ PROGRAMMER:  Mahmoud Azimaee                                    ¦
+  ¦ DATE:        April 2011                                         ¦
+  ¦ DESCRIPTION: This is an intermediate macro and is called from   ¦
+  ¦              the VIMO macro. It Identifies outliers and counts  ¦ 
+  ¦              number of them for all numeric variables and adds  ¦
+  ¦              it to VIMO's output.                               ¦ 
+  ¦ PARAMETERS:  DS= Name of Dataset                                ¦	
+  ¦ EXAMPLE:     %GETVARLIST (health.MHCPL_SPsection_19922010);     ¦	
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*/
+
+
+**********************************************************************;
+
+
+%MACRO OUTLIER(DS);
+
+%PUT ___________________________________________________________________;
+%PUT ¦ Manitoba Centre for Health policy (MCHP)                         ¦;
+%PUT ¦ MACRO:        OUTLIER                                            ¦;
+%PUT ¦ JOB:          Data Quality                                       ¦;
+%PUT ¦ PROGRAMMER:   Mahmoud Azimaee                                    ¦;
+%PUT ¦ DATE:         April 2011                                         ¦;
+%PUT ¦ Running for:  &DS;
+%PUT ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯;
+
+	%LET VARN=;
+   %GETVARLIST(&DS);
+	%LET VARN=%SYSFUNC(COUNTC(&NVARLIST,' '));
+	%LET VARN=%EVAL(&VARN+1);
+
+      %* If there are any numeric variables, do the following;
+	%IF &NVARLIST NE %THEN %DO;
+	proc contents data=&LIB..&DSN out=content_N noprint;
+		run;
+	data content_N;
+		set content_N (where=(type=1));
+		I + 1;
+		keep NAME I;
+		run;
+	proc means data=&LIB..&DSN noprint qmethod=p2;
+		var &NVARLIST;
+		output out=tmp
+			   q1=
+			   q3=
+			   qrange= /autoname;
+		run;
+	data outliers;
+		run;
+	%LET DS_DEL=;
+	%LET VARS=;
+	%DO I=1 %TO &VARN ;
+		%LET VARNAME&I= ;
+		PROC SQL NOPRINT;
+		    SELECT NAME INTO :VAR    
+		    FROM CONTENT_N  
+		    WHERE I = &I; 
+			quit;
+		%IF %EVAL(%LENGTH(&VAR)) > 23 %THEN %DO;
+			%PUT &VAR;
+			%LET q1=%SYSFUNC(CATS(&VAR,_q1));
+			%LET q3=%SYSFUNC(CATS(&VAR,_q3));
+			%LET qrange=%SYSFUNC(SUBSTR(&VAR,1,23));
+			%LET qrange=%SYSFUNC(CATS(&qrange,_qrange));
+			%PUT &qrange &q1 &q3;
+		%END;
+		%ELSE %DO;
+			%LET q1=%SYSFUNC(CATS(&VAR,_q1));
+			%LET q3=%SYSFUNC(CATS(&VAR,_q3));
+			%LET qrange=%SYSFUNC(CATS(&VAR,_qrange));
+			%PUT &qrange &q1 &q3;
+		%END;
+		%LET DS_DEL=&DS_DEL __&var ;
+		data __&var;
+			if _n_=1 then set tmp;
+			set &LIB..&DSN (keep=&VAR);
+			L= &q1 - 2.5*&qrange;
+			U= &q3 + 2.5*&qrange;
+			if not missing(&VAR) and ( &VAR < L  or  &VAR > U )	then __&var=1; else __&var=0;
+			keep __&var ;
+			run;
+		proc means data=__&var noprint;
+			output out=outlier sum=&VAR;
+			run;
+		Data outliers;
+			set outliers outlier;
+			run;
+		%LET VARS=&VARS __&var;
+	%END;
+	data outliers;
+		set outliers;
+		drop _TYPE_ _FREQ_ ;
+		run;
+	proc means data=outliers noprint;
+		output out=outlier sum=;
+		run;
+	data outlier;
+		set outlier;
+		drop _TYPE_ _FREQ_ ;
+		run;
+
+	proc transpose data=outlier out=outlier;
+		run;
+	data outlier;
+		set outlier;
+		_NAME_=UPCASE(_NAME_);
+		rename _NAME_ = VARNAME COL1=Outlier_n;
+		label _NAME_='Variable Name';
+		run;
+	proc datasets library=work;
+			delete &DS_DEL outliers; 
+	run;
+	quit;
+	proc sort data=outlier;
+		by varname;
+		run;
+  %END;	
+%MEND OUTLIER;

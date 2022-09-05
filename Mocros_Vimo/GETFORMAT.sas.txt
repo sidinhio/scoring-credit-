@@ -1,0 +1,75 @@
+/*___________________________________________________________________
+  ¦ MACRO:       GETFORMAT                                          ¦
+  ¦ JOB:         Data Quality                                       ¦
+  ¦ PROGRAMMER:  Mahmoud Azimaee                                    ¦
+  ¦ DATE:        April 2011                                         ¦
+  ¦ DESCRIPTION: For a given dataset this Macro creates a temporary ¦ 
+  ¦              sas dataset called contents(which is basically     ¦
+  ¦              output of PROC CONTENTS). Also two macro variables ¦
+  ¦              NVFMT & CVFMT containing numeric and character     ¦
+  ¦              variables with their formats separated by a blank  ¦
+  ¦              will be created.                                   ¦
+  ¦ PARAMETERS:  DS= Name of Dataset                                ¦	
+  ¦ EXAMPLE:     %GETFORMAT (health.MHCPL_SPsection_19922010);      ¦	
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*/
+
+
+**********************************************************************;
+
+
+%MACRO GETFORMAT(DS);
+
+%PUT ___________________________________________________________________;
+%PUT ¦ Manitoba Centre for Health policy (MCHP)                         ¦;
+%PUT ¦ MACRO:        GETFORMAT                                          ¦;
+%PUT ¦ JOB:          Data Quality                                       ¦;
+%PUT ¦ PROGRAMMER:   Mahmoud Azimaee                                    ¦;
+%PUT ¦ DATE:         April 2011                                         ¦;
+%PUT ¦ Running for:  &DS;
+%PUT ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯;
+
+	%* Initialize macro variables to null;
+   %GLOBAL NVFMT CVFMT;
+   %LET LIB = ;
+   %LET DSN = ;
+
+	%***Single level data set name;
+   %IF %INDEX(&DS,.) = 0 %THEN %DO; 
+      %LET LIB = WORK;
+      %LET DSN = %UPCASE(&DS);
+   %END;
+
+   %***Two level data set name;
+   %ELSE %DO; 
+      %LET LIB = %UPCASE(%SCAN(&DS,1,"."));
+      %LET DSN = %UPCASE(%SCAN(&DS,2,"."));
+   %END;
+
+	proc contents data=&LIB..&DSN  out=contents noprint;
+	run;
+
+	data contents;
+		set contents ;
+		if format^='' then FMT=CATX(" ",name,CATS(format,formatl,'.'));
+		if format^='' then Format=CATS(format,formatl,'.');
+		if (index(name,'PHIN')^=0 | index(name,'phin')^=0) & format='Z15.' then phin=1;
+			else phin=0;
+		NAME=UPCASE(NAME);
+		keep name type length label format formatl informat informd FMT phin;
+		rename name=varname;
+		run;
+	proc sql noprint;
+		select FMT into :NVFMT separated by " "
+		from contents
+		where type=1;
+	quit;
+	proc sql noprint;
+		select FMT into :CVFMT separated by " "
+		from contents
+		where type=2;
+	quit;
+	proc sort data=contents;
+		by varname;
+		run;
+%MEND GETFORMAT;
+

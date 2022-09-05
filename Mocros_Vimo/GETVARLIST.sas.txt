@@ -1,0 +1,69 @@
+/*___________________________________________________________________
+  ¦ MACRO:       GETVARLIST                                         ¦
+  ¦ JOB:         Data Quality                                       ¦
+  ¦ PROGRAMMER:  Mahmoud Azimaee                                    ¦
+  ¦ DATE:        April 2011                                         ¦
+  ¦ DESCRIPTION: This is an intermediate macro and is used in many  ¦
+  ¦              other DQ macros. For a given dataset this Macro    ¦ 
+  ¦              creates two macro variables containing a list of   ¦
+  ¦              all character and numeric variables separated by   ¦
+  ¦              a blank: NVARLIST & CVARLIST .                     ¦
+  ¦ PARAMETERS:  DS= Name of Dataset                                ¦	
+  ¦ EXAMPLE:     %GETVARLIST (health.MHCPL_SPsection_19922010);     ¦	
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*/
+
+
+**********************************************************************;
+
+
+%MACRO GETVARLIST(DS);
+
+%PUT ___________________________________________________________________;
+%PUT ¦ Manitoba Centre for Health policy (MCHP)                         ¦;
+%PUT ¦ MACRO:        GETVARLIST                                         ¦;
+%PUT ¦ JOB:          Data Quality                                       ¦;
+%PUT ¦ PROGRAMMER:   Mahmoud Azimaee                                    ¦;
+%PUT ¦ DATE:         April 2011                                         ¦;
+%PUT ¦ Running for:  &DS;
+%PUT ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯;
+
+	%* Initialize macro variables to null;
+   %GLOBAL NVARLIST CVARLIST LIB DSN;
+   %LET LIB = ;
+   %LET DSN = ;
+   %LET NVARLIST=;
+   %LET CVARLIST=;
+
+	%***Single level data set name;
+   %IF %INDEX(&DS,.) = 0 %THEN %DO; 
+      %LET LIB = WORK;
+      %LET DSN = %UPCASE(&DS);
+   %END;
+
+   %***Two level data set name;
+   %ELSE %DO; 
+      %LET LIB = %UPCASE(%SCAN(&DS,1,"."));
+      %LET DSN = %UPCASE(%SCAN(&DS,2,"."));
+   %END;
+
+   %*Note: it is important for the libname and Data set name to be in upper case;
+
+   %* Get list of numeric variables;
+   PROC SQL NOPRINT;
+      SELECT NAME INTO :NVARLIST SEPARATED BY " "  
+      FROM DICTIONARY.COLUMNS  
+      WHERE LIBNAME = "&LIB" AND MEMNAME = "&DSN" AND TYPE = "num";  
+
+   %* Get list of character variables;
+   SELECT NAME INTO :CVARLIST SEPARATED BY " "  
+      FROM DICTIONARY.COLUMNS
+      WHERE LIBNAME = "&LIB" AND MEMNAME = "&DSN" AND TYPE = "char"; 
+   QUIT;
+
+%LET NVARLIST=%UPCASE(&NVARLIST);
+%LET CVARLIST=%UPCASE(&CVARLIST);
+
+%MEND GETVARLIST;
+
+
+

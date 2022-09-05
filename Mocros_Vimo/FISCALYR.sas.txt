@@ -1,0 +1,63 @@
+/*___________________________________________________________________
+  ¦ MACRO:       FISCALYR                                           ¦
+  ¦ JOB:         Data Quality                                       ¦
+  ¦ PROGRAMMER:  Mahmoud Azimaee                                    ¦
+  ¦ DATE:        April 2011                                         ¦
+  ¦ DESCRIPTION: This Macro creates a fiscal year format to be used ¦
+  ¦              on a SAS Date variable. The format will be saved as¦
+  ¦              a SAS file in /dq/saswork/[USERNAME]/ under the    ¦
+  ¦              name 'temp_fy.sas'.                                ¦
+  ¦              Use %include 'temp_fy.sas'  in your programs to    ¦
+  ¦              call it. The format name is 'fy.' .                ¦
+  ¦ PARAMETERS:  STARTYR= First part of the starting fiscal year    ¦	
+  ¦              ENDYR= First part of the ending fiscal year        ¦	
+  ¦ EXAMPLE:     %fiscalyr(1992,2009);                              ¦	
+  ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*/
+
+
+**********************************************************************;
+
+
+%Macro fiscalyr(startyr,endyr);
+
+%PUT ___________________________________________________________________;
+%PUT ¦ Manitoba Centre for Health policy (MCHP)                         ¦;
+%PUT ¦ MACRO:        FISCALYR                                           ¦;
+%PUT ¦ JOB:          Data Quality                                       ¦;
+%PUT ¦ PROGRAMMER:   Mahmoud Azimaee                                    ¦;
+%PUT ¦ DATE:         April 2011                                         ¦;
+%PUT ¦ Running for:  &STARTYR - &ENDYR ;
+%PUT ¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯;
+
+	data fiscalyr;
+		start='"01Apr';
+		middle='"d - "31Mar';
+		end='"d = ';
+		length des $50. ;
+		startnum=SYMGETN('startyr');
+		endnum=SYMGETN('endyr');
+		yrs=endnum - startnum;
+		do i=0 to yrs;
+			lcl=startnum + i;
+			ucl=lcl + 1;
+			des=start || put(lcl,$4.) || middle || put(ucl,$4.) || end 
+				|| "'" ||put(lcl,$4.) || "/" || substr(put(ucl,$4.),3,2) || "'";
+			output;
+		end;
+		run;
+	data _null_ ;
+		file "/dq/saswork/&spdsuser/temp_fy.sas" ;	/*where /dq/saswork/&spdsuser is the directory to save to temp_fy.sas*/
+		set fiscalyr end=last;
+		if _n_=1 then do;
+	 		put 'proc format;';
+			put 'value fy';
+		end;
+		put des;
+		if last then put "other = 'Other Years';";
+		run;
+	proc datasets library=work ;
+		delete fiscalyr;
+	run;
+%Mend fiscalyr;
+
+
